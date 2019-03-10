@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>openlayer</title>
+  <link rel="stylesheet" href="./css/ol.css" type="text/css">
+  <style>
+    #map {
+      position: relative;
+      width: 100%;
+      height: 600px;
+    }
+    #location {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 100;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map">
+    <button id="location" type="button">开启定位</button>
+  </div>
+  <script src="./js/ol.js"></script>
+  <script src="./map.js"></script>
+  <script>
+    const map = new Map('map')
+    const destinateLayer = new ol.layer.Vector({
+      name: 'destination',
+      source: new ol.source.Vector(),
+      style: new ol.style.Style({
+        fill: new ol.style.Fill({
+          color: 'rgba(0, 0, 0, .3)'
+        })
+      })
+    })
+    const locationLayer = new ol.layer.Vector({
+      name: 'location',
+      source: new ol.source.Vector()
+    })
+    map.addLayers([destinateLayer, locationLayer])
+
+    let zoom = map.getZoom()
+    let des_coor = [113.239642, 23.15483]
+    let self_coor = [113.239642, 23.1544803]
+
+    const destination = new ol.Feature(new ol.geom.Point(des_coor))
+
+    destination.setStyle(new ol.style.Style({
+      image: new ol.style.Icon({
+        src: './img/destination.png',
+        scale: zoom / 18
+      })
+    }))
+
+    const destination_circle = new ol.Feature(new ol.geom.Polygon.circular(des_coor, 50, 64))
+    // 这个radius为50,相当于50经纬度的长度
+    // const destination_circle = new ol.Feature(new ol.geom.Circle(des_coor, 50))
+
+    destinateLayer.getSource().addFeatures([destination, destination_circle])
+
+    const locationSelf = new ol.Feature({
+      geometry: new ol.geom.Point(self_coor)
+    })
+
+    locationSelf.setStyle(new ol.style.Style({
+      image: new ol.style.Icon({
+        src: './img/destination.png',
+        scale: zoom / 18
+      })
+    }))
+    locationLayer.getSource().addFeature(locationSelf)
+    
+    // 获取2点之前的距离
+    let length = ol.sphere.getDistance(self_coor, des_coor)
+    console.log(length)
+
+    // 判断是否在圆的范围内
+    let isInside = destination_circle.getGeometry().intersectsExtent(locationSelf.getGeometry().getExtent())
+    // console.log(isInside)
+    // console.log(destination_circle.getGeometry().getExtent())
+    // console.log(locationSelf.getGeometry().getExtent())
+
+    map.getView().on('change:resolution', function(e) {
+      let zoom = this.getZoom()
+      destination.getStyle().getImage().setScale(zoom / 18)
+      locationSelf.getStyle().getImage().setScale(zoom / 18)
+    })
+
+    console.log(ol.proj.get('EPSG:3857').getExtent())
+    console.log(ol.proj.get('EPSG:4326').getExtent())
+
+    const geolocation = new ol.Geolocation({
+      projection: map.getView().getProjection(),
+      // trackingOptions: {
+      //   maximunAge: 10000,
+      //   enableHighAccuracy: true,
+      //   timeout: 600000
+      // }
+    })
+
+    const location_btn = document.getElementById('location')
+    location_btn.onclick = function() {
+      geolocation.setTracking(true)
+      console.log(geolocation.getPosition())
+    }
+
+    geolocation.on('change', function(evt) {
+      console.log('change')
+      console.log(geolocation.getPosition())
+    })
+    geolocation.on('error', function(error) {
+      console.log(error.message)
+    })
+
+
+    let accuracyFeature = new ol.Feature()
+    geolocation.on('change:accuracyGeometry', function(evt) {
+      console.log('change:accuracyGeometry')
+      accuracyFeature.setGeometry(geolocation.getAccuracyGeometry())
+    })
+
+    let positionFeature = new ol.Feature()
+    positionFeature.setStyle(new ol.style.Style({
+      image: new ol.style.Circle({
+        radius: 6,
+        fill: new ol.style.Fill({
+          color: '#3399CC'
+        }),
+        stroke: new ol.style.Stroke({
+          color: '#fff',
+          width: 2
+        })
+      })
+    }))
+
+    geolocation.on('change:position', function(evt) {
+      console.log('change:position')
+      let coordinates = geolocation.getPostion()
+    })
+    // let layers = map.getLayers()
+    // for(let i = layers.length - 1; i >= 0; i--) {
+    //   console.log(layers[i])
+    //   if (layers[i].get('name')) {
+    //     map.removeLayer(layers[i])
+    //   }
+    // }
+  </script>
+</body>
+
+</html>
