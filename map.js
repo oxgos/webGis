@@ -18,6 +18,20 @@ class Map {
         projection: 'EPSG:4326'
       })
     })
+
+    this.map.on('singleclick', (e) => {
+      // 阻止事件冒泡
+      e.stopPropagation()
+      // 获取用户点击的区域像素
+      let pixel = this.map.getEventPixel(e.originalEvent)
+      // 获取像素内的要素
+      let feature = this.map.forEachFeatureAtPixel(pixel, function(feature, layer) {
+          return feature
+      })
+      if (feature) {
+        // 得到点击的feature,按实际需求处理
+      }
+    })
   }
   getLayers() {
     return this.map.getLayers().array_
